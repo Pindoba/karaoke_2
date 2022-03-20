@@ -1,14 +1,11 @@
 import datetime
-from timeit import repeat
 from PyQt5 import uic, QtWidgets
 import sqlite3
 import time
-
-
-from pyrsistent import b
+import threading
 
 numero_id = 0
-
+stop = False
 
 def iniciar():
     data = datetime.datetime.now()
@@ -51,16 +48,11 @@ def listar_dados():
     banco = sqlite3.connect('banco_dados.db')
     cursor = banco.cursor()
     cursor.execute("SELECT * FROM dados")
-    # cursor.execute("SELECT * FROM dados WHERE status = ''")
     dados_lidos = cursor.fetchall()
     forme.tableWidget.setRowCount(len(dados_lidos))
     forme.tableWidget.setColumnCount(4)
-    # soma = 0
-    # linha = forme.tableWidget.currentRow()
     banco.close()
-
     falta = [(range(0, len(dados_lidos), 1))]
-    # print(falta)
 
     for i in range(0, len(dados_lidos)):
         for j in range(0, 3):
@@ -70,7 +62,6 @@ def listar_dados():
         for j in range(2, 3):
             forme.tableWidget.setItem(i, j, QtWidgets.QTableWidgetItem('Falta '+str(falta[0][i])+' pessoas - '+ str(int(falta[0][i]*5.3))+' Min.'))
     forme.tableWidget.setItem(0, 2, QtWidgets.QTableWidgetItem('PRÓXIMO'))
-    hora_atualiza()
 
 
 def excluir():
@@ -86,14 +77,12 @@ def excluir():
     banco.commit()
     banco.close()
     listar_dados()
-    hora_atualiza()
 
 
 def editar():
     linha = forme.tableWidget.currentRow()
     global numero_id
     banco = sqlite3.connect('banco_dados.db')
-
     cursor = banco.cursor()
     cursor.execute("SELECT id FROM dados")
     dados_lidos = cursor.fetchall()
@@ -101,10 +90,8 @@ def editar():
     cursor.execute("SELECT * FROM dados WHERE id=" + str(valor_id))
     status = cursor.fetchall()
     numero_id = valor_id
-    hora_atualiza()
     
     editor.show()
-
     editor.lineEdit.setText(str(status[0][0]))
     editor.lineEdit_2.setText(str(status[0][1]))
     editor.lineEdit_3.setText(str(status[0][2]))
@@ -122,7 +109,6 @@ def cantou():
     valor_id = dados_lidos[linha][0]
     cursor.execute("SELECT * FROM dados WHERE id=" + str(valor_id))
     status = cursor.fetchall()
-    
     banco.close()
 
 
@@ -160,17 +146,22 @@ def salvar():
     cursor.execute("UPDATE dados SET nome = '{}', status = '{}' WHERE id = {}".format(nome, status, numero_id))
     banco.commit()
 
-
     listar_dados()
     banco.close()
     editor.close()
-    hora_atualiza()
+
 
 def hora_atualiza():
-    hora = datetime.datetime.now()
-    hora_str = hora.strftime("%H:%M")
-    forme.label_4.setText(hora_str)
-    # print(hora_str)
+    global stop
+    
+    for i in range(99999):
+        if stop == True:
+            break
+        hora = datetime.datetime.now()
+        hora_str = hora.strftime("%H:%M:%S")
+        forme.label_4.setText(hora_str)
+        print(hora_str)
+        time.sleep(1)
 
 
 def histo():
@@ -182,33 +173,25 @@ def histo():
     dados_lidos = cursor.fetchall()
     historico.tableWidget.setRowCount(len(dados_lidos))
     historico.tableWidget.setColumnCount(5)
-
     linha = forme.tableWidget.currentRow()
 
-
     banco.close()
-
 
     for i in range(0, len(dados_lidos)):
         for j in range(0, 5):
             historico.tableWidget.setItem(i, j, QtWidgets.QTableWidgetItem(str(dados_lidos[i][j])))
 
 
-    hora_atualiza()
-
-
 app = QtWidgets.QApplication([])
-
 forme = uic.loadUi("karaoke.ui")
-
 editor = uic.loadUi("editar.ui")
 historico = uic.loadUi("historico.ui")
 forme.show()
 
 iniciar()
 listar_dados()
-hora_atualiza()
 
+threading.Thread(target=hora_atualiza).start()
 
 forme.pushButton_5.clicked.connect(add)
 forme.pushButton_9.clicked.connect(listar_dados)
@@ -218,13 +201,6 @@ forme.pushButton.clicked.connect(cantou)
 editor.pushButton.clicked.connect(salvar)
 forme.pushButton_3.clicked.connect(histo)
 
-# time.sleep(2)
-
-
 app.exec_()
 
-# while 1:
-#     hora_atualiza()
-#     time.sleep(2)
-
-
+stop = True
