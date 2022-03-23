@@ -160,7 +160,7 @@ def hora_atualiza():
         hora = datetime.datetime.now()
         hora_str = hora.strftime("%H:%M:%S")
         forme.label_4.setText(hora_str)
-        print(hora_str)
+        # print(hora_str)
         time.sleep(1)
 
 
